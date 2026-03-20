@@ -8,7 +8,7 @@ return {
     "nvim-lua/plenary.nvim",
     "lewis6991/gitsigns.nvim", -- recommended for Connected Mode / SCM info
   },
-  ft = { "typescript", "typescriptreact", "javascript", "javascriptreact" },
+  ft = { "typescript", "typescriptreact", "javascript", "javascriptreact", "html", "css", "scss", "java" },
   config = function()
     -- Make sure mason is initialized somewhere in your setup:
     -- require("mason").setup()
@@ -25,6 +25,7 @@ return {
           vim.fn.expand("$MASON/share/sonarlint-analyzers/sonarjs.jar"), -- JS/TS rules
           vim.fn.expand("$MASON/share/sonarlint-analyzers/sonarhtml.jar"), -- JSX/HTML rules
           vim.fn.expand("$MASON/share/sonarlint-analyzers/sonarcss.jar"), -- CSS-in-JS, style files, etc.
+          vim.fn.expand("$MASON/share/sonarlint-analyzers/sonarjava.jar"),
         },
         settings = {
           sonarlint = {
@@ -61,6 +62,10 @@ return {
         "typescriptreact", -- .tsx
         "javascript",
         "javascriptreact", -- .jsx
+        "html",
+        "css",
+        "scss",
+        "java",
       },
     })
   end,

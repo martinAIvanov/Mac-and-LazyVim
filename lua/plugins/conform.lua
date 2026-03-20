@@ -2,6 +2,9 @@ return {
   {
     "stevearc/conform.nvim",
     opts = function(_, opts)
+      -- map Java to google-java-format
+      opts.formatters_by_ft = opts.formatters_by_ft or {}
+      opts.formatters_by_ft.java = { "google-java-format" }
       -- Add your filetype mappings
       opts.formatters_by_ft.tex = { "tex-fmt" }
       opts.formatters_by_ft.plaintex = { "tex-fmt" }
@@ -10,9 +13,6 @@ return {
       opts.lsp_fallback = false
       -- Add your custom command paths
       opts.formatters = opts.formatters or {}
-      opts.formatters["tex-fmt"] = {
-        command = "/home/marto/.cargo/bin/tex-fmt",
-      }
     end,
   },
 }
