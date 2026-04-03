@@ -79,7 +79,7 @@ local function fetch_aihub_models()
       if not m.id:match("embedding") and not m.id:match("intfloat/e5") then
         table.insert(models, {
           id = m.id,
-          desc = m.id, -- simple description = id; you can add nicer labels later if you want
+          desc = m.description or m.desc or "", -- simple description = id; you can add nicer labels later if you want
         })
       end
     end
