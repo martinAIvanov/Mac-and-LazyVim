@@ -13,49 +13,6 @@ local DEFAULT_TEMPERATURE = 0.2
 -- AI Hub (OpenAI-compatible) endpoint
 local AI_HUB_ENDPOINT = "https://adesso-ai-hub.3asabc.de/v1"
 
--- All AI Hub chat models you can use (excluding pure embedding models)
-local AI_HUB_MODELS = {
-  -- GPT family
-  { id = "gpt-4o", desc = "GPT-4o (general coding & chat)" },
-  { id = "gpt-4.1", desc = "GPT-4.1 (strong generalist)" },
-  { id = "gpt-4.1-mini", desc = "GPT-4.1 Mini (fast & cheap)" },
-  { id = "gpt-4.1-nano", desc = "GPT-4.1 Nano (very fast, lightweight)" },
-  { id = "gpt-5-nano", desc = "GPT-5 Nano (small, experimental)" },
-  { id = "gpt-5-mini", desc = "GPT-5 Mini (fast, experimental)" },
-  { id = "gpt-5.1", desc = "GPT-5.1 (advanced generalist)" },
-  { id = "gpt-5", desc = "GPT-5 (flagship, if available)" },
-
-  -- US-prefixed GPT / Gemini models
-  { id = "US-gpt-5.4", desc = "US GPT-5.4 (US region)" },
-  { id = "US-gpt-5.3-codex", desc = "US GPT-5.3 Codex (code-focused, US region)" },
-  { id = "US-gemini-3-flash-preview", desc = "US Gemini 3 Flash Preview (fast, US region)" },
-  { id = "US-gemini-3.1-pro-preview", desc = "US Gemini 3.1 Pro Preview (strong, US region)" },
-
-  -- Gemini 2.5
-  { id = "gemini-2.5-flash", desc = "Gemini 2.5 Flash (fast, cheap)" },
-  { id = "gemini-2.5-pro", desc = "Gemini 2.5 Pro (strong generalist)" },
-
-  -- Claude family (4.5 / 4.6)
-  { id = "claude-sonnet-4-6", desc = "Claude Sonnet 4.6 (balanced, generalist)" },
-  { id = "claude-opus-4-6", desc = "Claude Opus 4.6 (heavy reasoning, expensive)" },
-  { id = "claude-sonnet-4-5", desc = "Claude Sonnet 4.5 (strong coding & reasoning)" },
-  { id = "claude-opus-4-5", desc = "Claude Opus 4.5 (very strong reasoning, pricey)" },
-  { id = "claude-haiku-4.5", desc = "Claude Haiku 4.5 (fast, lightweight Claude)" },
-
-  -- LLaMA / Gemma / Qwen etc.
-  { id = "llama-3-3-70b", desc = "Llama 3.3 70B (Meta open model)" },
-  { id = "google/gemma-3-27b-it", desc = "Gemma 3 27B (instruction-tuned)" },
-  { id = "qwen3-235b", desc = "Qwen3 235B (large generalist)" },
-  { id = "qwen-3.5-122b-sovereign", desc = "Qwen 3.5 122B Sovereign (sovereign-hosted)" },
-  { id = "qwen3-coder-480b", desc = "Qwen3 Coder 480B (code-focused)" },
-  { id = "gpt-oss-120b-sovereign", desc = "GPT-OSS 120B (sovereign model)" },
-  { id = "devstral-2-123b", desc = "Devstral 2 123B (big open model)" },
-
-  -- OpenAI o- / o3 reasoning models
-  { id = "o3-mini", desc = "o3-mini (reasoning-focused, compact)" },
-  { id = "o4-mini", desc = "o4-mini (stronger reasoning, compact)" },
-}
-
 -- Warn if AI Hub key is missing
 local function validate_aihub_key()
   if not os.getenv("OPENAI_API_KEY") then
@@ -66,6 +23,93 @@ local function validate_aihub_key()
     )
   end
 end
+
+-- Dynamically fetch models from AI Hub /v1/models
+local function fetch_aihub_models()
+  local ok, curl = pcall(require, "plenary.curl")
+  if not ok then
+    vim.notify(
+      "Avante (AI Hub): plenary.curl not available, using static model fallback.",
+      vim.log.levels.WARN,
+      { title = "Avante / AI Hub" }
+    )
+    return nil
+  end
+
+  local api_key = os.getenv("OPENAI_API_KEY")
+  if not api_key or api_key == "" then
+    vim.notify(
+      "Avante (AI Hub): OPENAI_API_KEY not set. Cannot fetch models dynamically.",
+      vim.log.levels.WARN,
+      { title = "Avante / AI Hub" }
+    )
+    return nil
+  end
+
+  -- AI_HUB_ENDPOINT already ends with /v1, so /v1 + "/models" -> /v1/models
+  local res = curl.get(AI_HUB_ENDPOINT .. "/models", {
+    headers = {
+      Authorization = "Bearer " .. api_key,
+    },
+  })
+
+  if res.status ~= 200 then
+    vim.notify(
+      ("Avante (AI Hub): /models request failed (%s). Using static model fallback."):format(res.status),
+      vim.log.levels.WARN,
+      { title = "Avante / AI Hub" }
+    )
+    return nil
+  end
+
+  local ok_json, body = pcall(vim.json.decode, res.body)
+  if not ok_json or type(body) ~= "table" or type(body.data) ~= "table" then
+    vim.notify(
+      "Avante (AI Hub): could not decode /models response. Using static model fallback.",
+      vim.log.levels.WARN,
+      { title = "Avante / AI Hub" }
+    )
+    return nil
+  end
+
+  local models = {}
+  for _, m in ipairs(body.data) do
+    if type(m.id) == "string" then
+      -- Filter out pure embedding / embedding-like models if you don't want them in chat
+      if not m.id:match("embedding") and not m.id:match("intfloat/e5") then
+        table.insert(models, {
+          id = m.id,
+          desc = m.id, -- simple description = id; you can add nicer labels later if you want
+        })
+      end
+    end
+  end
+
+  table.sort(models, function(a, b)
+    return a.id < b.id
+  end)
+
+  if #models == 0 then
+    vim.notify(
+      "Avante (AI Hub): /models returned no usable models. Using static model fallback.",
+      vim.log.levels.WARN,
+      { title = "Avante / AI Hub" }
+    )
+    return nil
+  end
+
+  return models
+end
+
+-- All AI Hub chat models: dynamic fetch with static fallback
+local AI_HUB_MODELS = fetch_aihub_models()
+  or {
+    -- Minimal static fallback (you can keep your full list here if you like)
+    { id = "gpt-4o", desc = "gpt-4o" },
+    { id = "gpt-4.1", desc = "gpt-4.1" },
+    { id = "gpt-4.1-mini", desc = "gpt-4.1-mini" },
+    { id = "gpt-4.1-nano", desc = "gpt-4.1-nano" },
+  }
 
 -- Single AI Hub provider (OpenAI-compatible)
 local function create_aihub_provider(default_model, global_extra)
@@ -225,7 +269,7 @@ return {
       timeout = 30000,
     })
 
-    -- Single AI Hub provider; default model = first in AI_HUB_MODELS (currently gpt-4o)
+    -- Single AI Hub provider; default model = first in AI_HUB_MODELS
     local default_aihub_model = AI_HUB_MODELS[1].id
     opts.providers.aihub = create_aihub_provider(default_aihub_model, global_extra)
   end,
