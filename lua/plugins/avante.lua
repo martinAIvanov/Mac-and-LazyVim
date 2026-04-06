@@ -252,7 +252,7 @@ return {
     -- Default provider when Avante starts:
     -- "copilot" -> Copilot backend (and Avante's <leader>am for Copilot models)
     -- "aihub"   -> AI Hub backend with default model (below)
-    opts.provider = opts.provider or "copilot"
+    opts.provider = opts.provider or "aihub"
 
     opts.timeout = DEFAULT_TIMEOUT_MS
 
@@ -271,6 +271,7 @@ return {
 
     -- Single AI Hub provider; default model = first in AI_HUB_MODELS
     local default_aihub_model = AI_HUB_MODELS[1].id
+    -- local default_aihub_model = "gpt-oss-120b-sovereign"
     opts.providers.aihub = create_aihub_provider(default_aihub_model, global_extra)
   end,
 }
