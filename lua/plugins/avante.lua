@@ -231,10 +231,18 @@ return {
   -- We DO NOT touch <leader>am.
   -- We only add <leader>aH for AI Hub model selection.
   keys = {
+    { "<leader>aa", false },
+    { "<leader>at", false },
     {
       "<leader>aH",
       switch_aihub_model,
       desc = "Avante: Switch AI Hub model",
+    },
+    {
+      "<leader>av",
+      "<cmd>AvanteToggle<CR>",
+      desc = "Avante: Toggle Avante",
+      mode = { "n", "v" },
     },
   },
 
