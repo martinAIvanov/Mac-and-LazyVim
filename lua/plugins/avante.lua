@@ -111,6 +111,8 @@ local AI_HUB_MODELS = fetch_aihub_models()
     { id = "gpt-4.1-nano", desc = "gpt-4.1-nano" },
   }
 
+-- print("AI_HUB_MODELS: " .. vim.inspect(AI_HUB_MODELS))
+
 -- Single AI Hub provider (OpenAI-compatible)
 local function create_aihub_provider(default_model, global_extra)
   return {
@@ -120,61 +122,6 @@ local function create_aihub_provider(default_model, global_extra)
     model = default_model,
     extra_request_body = global_extra,
   }
-end
-
--- Picker: switch AI Hub model (only affects provider="aihub")
-local function switch_aihub_model()
-  local avante_config = require("avante.config")
-  local snacks = require("snacks")
-
-  local current_model = ((avante_config.providers or {}).aihub or {}).model or AI_HUB_MODELS[1].id
-
-  local items = {}
-  for _, m in ipairs(AI_HUB_MODELS) do
-    local indicator = (m.id == current_model) and "● " or "  "
-
-    local preview_lines = {
-      "# " .. m.id,
-      "",
-      "**Model:** `" .. m.id .. "`",
-      "",
-      "**Description:** " .. (m.desc or ""),
-      "",
-      "---",
-      "",
-      "**Backend:** adesso AI Hub (OpenAI-compatible API)",
-    }
-
-    table.insert(items, {
-      text = string.format("%s%-28s %s", indicator, m.id, m.desc or ""),
-      model = m.id,
-      preview = {
-        text = table.concat(preview_lines, "\n"),
-        ft = "markdown",
-      },
-    })
-  end
-
-  snacks.picker({
-    items = items,
-    prompt = "Select AI Hub model",
-    format = "text",
-    preview = "preview",
-    layout = { preset = "default" },
-    confirm = function(picker, item)
-      picker:close()
-      if item then
-        avante_config.providers = avante_config.providers or {}
-        avante_config.providers.aihub = avante_config.providers.aihub or {}
-        avante_config.providers.aihub.model = item.model
-        vim.notify(
-          ("Avante: AI Hub model set to %s"):format(item.model),
-          vim.log.levels.INFO,
-          { title = "Avante / AI Hub" }
-        )
-      end
-    end,
-  })
 end
 
 return {
@@ -234,11 +181,6 @@ return {
     { "<leader>aa", false },
     { "<leader>at", false },
     {
-      "<leader>aH",
-      switch_aihub_model,
-      desc = "Avante: Switch AI Hub model",
-    },
-    {
       "<leader>av",
       "<cmd>AvanteToggle<CR>",
       desc = "Avante: Toggle Avante",
@@ -257,29 +199,41 @@ return {
       height = 16,
     })
 
-    -- Default provider when Avante starts:
-    -- "copilot" -> Copilot backend (and Avante's <leader>am for Copilot models)
-    -- "aihub"   -> AI Hub backend with default model (below)
-    opts.provider = opts.provider or "aihub"
-
     opts.timeout = DEFAULT_TIMEOUT_MS
-
-    -- Global defaults for AI Hub
-    local global_extra = {
-      temperature = DEFAULT_TEMPERATURE,
-    }
-
-    opts.extra_request_body = global_extra
     opts.providers = opts.providers or {}
 
-    -- Ensure Copilot provider exists (Avante will augment it)
+    -- Copilot-Provider wie gehabt
     opts.providers.copilot = vim.tbl_extend("force", opts.providers.copilot or {}, {
       timeout = 30000,
     })
 
-    -- Single AI Hub provider; default model = first in AI_HUB_MODELS
-    local default_aihub_model = AI_HUB_MODELS[1].id
-    -- local default_aihub_model = "gpt-oss-120b-sovereign"
-    opts.providers.aihub = create_aihub_provider(default_aihub_model, global_extra)
+    -- Kleine Hilfsfunktion, um Model-IDs in Provider-Namen zu verwandeln
+    local function sanitize_model_id(id)
+      -- alles, was kein Buchstabe/Zahl/Unterstrich ist, durch "_" ersetzen
+      return (id:gsub("[^%w_]", "_"))
+    end
+
+    -- Für jedes Modell aus AI_HUB_MODELS einen eigenen Provider anlegen
+    for _, m in ipairs(AI_HUB_MODELS) do
+      local provider_name = "aihub_" .. sanitize_model_id(m.id)
+
+      opts.providers[provider_name] = create_aihub_provider(m.id, {
+        temperature = DEFAULT_TEMPERATURE,
+      })
+    end
+
+    -- Default-Provider beim Start:
+    -- z.B. das souveräne GPT-OSS Modell, falls vorhanden
+    local default_model_id = "gpt-oss-120b-sovereign"
+    local default_provider = "aihub_" .. sanitize_model_id(default_model_id)
+
+    if not opts.providers[default_provider] then
+      -- Fallback: erstes Modell aus der Liste
+      local first = AI_HUB_MODELS[1]
+      default_provider = "aihub_" .. sanitize_model_id(first.id)
+    end
+
+    -- HIER: nur noch diesen Default setzen
+    opts.provider = opts.provider or default_provider
   end,
 }
