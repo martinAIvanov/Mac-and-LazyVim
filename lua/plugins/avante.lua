@@ -8,9 +8,9 @@ local AI_HUB_ENDPOINT = "https://adesso-ai-hub.3asabc.de/v1"
 
 -- Warn if AI Hub key is missing
 local function validate_aihub_key()
-  if not os.getenv("OPENAI_API_KEY") then
+  if not os.getenv("SOVEREIGN_AI_API_KEY") then
     vim.notify(
-      "Avante (AI Hub): OPENAI_API_KEY not set. Export your AI Hub API key in your shell.",
+      "Avante (AI Hub): SOVEREIGN_AI_API_KEY not set. Export your AI Hub API key in your shell.",
       vim.log.levels.WARN,
       { title = "Avante / AI Hub" }
     )
@@ -29,10 +29,10 @@ local function fetch_aihub_models()
     return nil
   end
 
-  local api_key = os.getenv("OPENAI_API_KEY")
+  local api_key = os.getenv("SOVEREIGN_AI_API_KEY")
   if not api_key or api_key == "" then
     vim.notify(
-      "Avante (AI Hub): OPENAI_API_KEY not set. Cannot fetch models dynamically.",
+      "Avante (AI Hub): SOVEREIGN_AI_API_KEY not set. Cannot fetch models dynamically.",
       vim.log.levels.WARN,
       { title = "Avante / AI Hub" }
     )
@@ -109,7 +109,7 @@ local function create_aihub_provider(default_model, global_extra)
   return {
     __inherited_from = "openai",
     endpoint = AI_HUB_ENDPOINT,
-    api_key_name = "OPENAI_API_KEY",
+    api_key_name = "SOVEREIGN_AI_API_KEY",
     model = default_model,
     extra_request_body = global_extra,
   }
@@ -124,6 +124,8 @@ end
 return {
   {
     "yetone/avante.nvim",
+    version = false,
+    build = "make",
 
     -- We override LazyVim's default config for Avante
     config = function(_, opts)
