@@ -1,0 +1,19 @@
+{
+  "fontFamily": "Arial, Helvetica, sans-serif",
+
+  "sequence": {
+    "wrap": true,
+    "wrapPadding": 8,
+
+    "actorMargin": 18,
+    "messageMargin": 16,
+
+    "actorFontSize": 34,
+    "messageFontSize": 38,
+    "noteFontSize": 34,
+
+    "actorFontWeight": "600",
+    "messageFontWeight": "600",
+    "noteFontWeight": "500"
+  }
+}

@@ -1,28 +1,17 @@
--- ~/.config/nvim/lua/plugins/copilot-early.lua
 return {
   {
     "zbirenbaum/copilot.lua",
-    -- Make sure Copilot is loaded and configured BEFORE Avante runs
-    lazy = false,
+    enabled = false,
+    -- Crucial: DO NOT load on startup. Load only when you call the auth command
+    cmd = "Copilot",
+    event = "InsertEnter",
     priority = 1000,
-
-    -- These opts are compatible with LazyVim's defaults; tweak if you want
+    -- version = "v2.0.4",
     opts = {
-      suggestion = {
-        enabled = true,
-        auto_trigger = true,
-        -- if you use ai-cmp or blink.cmp, you might want hide_during_completion = true
-      },
+      suggestion = { enabled = false }, -- Turn off to avoid conflicts with Avante/Blink
       panel = { enabled = false },
-      filetypes = {
-        markdown = true,
-        help = true,
-        -- add or remove filetypes as you like
-      },
     },
-
     config = function(_, opts)
-      -- This is the crucial bit: actually set up Copilot
       require("copilot").setup(opts)
     end,
   },
